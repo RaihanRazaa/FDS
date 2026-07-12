@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-df = pd.read_csv("C:/Users/Raihan/Downloads/titanic.csv")
+df = pd.read_csv("https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv")
 print("--- Full DataFrame ---")
 print(df)
 print("\n--- First 5 Rows ---")
@@ -28,17 +28,65 @@ print(df["PassengerId"].value_counts())
 binary = []
 ordinal = []
 nominal = []
+numeric = []
 for col in df.columns:
     if df[col].nunique(dropna=True) <= 2:
         binary.append(col)
     elif df[col].dtype == "object":
         nominal.append(col)
+    elif np.issubdtype(df[col].dtype, np.number):
+        numeric.append(col)
     else:
         ordinal.append(col)
 print("\n--- Attribute Classification ---")
 print("Binary attributes:", binary)
 print("Ordinal attributes:", ordinal)
 print("Nominal attributes:", nominal)
+print("Numeric attributes:", numeric)
+
+if len(nominal) >= 2:
+    print("\n--- Nominal Attribute Dissimilarities ---")
+    for i in range(len(nominal)):
+        for j in range(i + 1, len(nominal)):
+            col1 = nominal[i]
+            col2 = nominal[j]
+            s1 = df[col1].astype("object")
+            s2 = df[col2].astype("object")
+            valid = s1.notna() & s2.notna()
+            s1 = s1[valid]
+            s2 = s2[valid]
+            if len(s1) == 0:
+                dissim = np.nan
+            else:
+                mismatches = (s1 != s2).sum()
+                dissim = mismatches / len(s1)
+            print(f"{col1} vs {col2}: {dissim:.4f}")
+    print("Note: simple matching dissimilarity = fraction of rows where values differ.")
+else:
+    print("\nNo valid nominal attribute pairs found for dissimilarity.")
+
+if len(numeric) >= 2:
+    print("\n--- Numeric Attribute Dissimilarities ---")
+    for i in range(len(numeric)):
+        for j in range(i + 1, len(numeric)):
+            col1 = numeric[i]
+            col2 = numeric[j]
+            s1 = df[col1]
+            s2 = df[col2]
+            valid = s1.notna() & s2.notna()
+            s1 = s1[valid]
+            s2 = s2[valid]
+            if len(s1) == 0:
+                dissim = np.nan
+            else:
+                diff = np.abs(s1 - s2)
+                rng = max(s1.max() - s1.min(), s2.max() - s2.min())
+                dissim = diff.mean() / rng if rng != 0 else diff.mean()
+            print(f"{col1} vs {col2}: {dissim:.4f}")
+    print("Note: normalized numeric dissimilarity = mean absolute difference / range.")
+else:
+    print("\nNo valid numeric attribute pairs found for dissimilarity.")
+
 sns.set_theme(style="whitegrid")
 fig, axes = plt.subplots(1, 3, figsize=(15, 4))
 sns.countplot(x="Survived", data=df, ax=axes[0], palette="Set2")
